@@ -14,6 +14,9 @@ type Model struct {
 	target  []rune
 	current []rune
 
+	height int
+	width  int
+
 	Cursor cursor.Model
 
 	pos   int
@@ -71,6 +74,7 @@ func (m Model) Focused() bool {
 }
 
 // When starts, cursor no blinking until I move cursor
+// Init() function initializes the model.
 func (m Model) Init() tea.Cmd {
 	// m.cursor.BlinkCmd() ?
 	return nil
@@ -250,11 +254,4 @@ func (m Model) View() string {
 	}
 
 	return b.String()
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
