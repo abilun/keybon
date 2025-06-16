@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"keybon/generator"
+	"keybon/input"
 	"log"
-	"ngram/generator"
-	"ngram/input"
 	"os"
 	"strings"
 

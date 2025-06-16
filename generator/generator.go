@@ -2,7 +2,7 @@ package generator
 
 import (
 	"errors"
-	"ngram/model"
+	"keybon/model"
 	"strings"
 )
 

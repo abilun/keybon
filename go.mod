@@ -1,4 +1,4 @@
-module ngram
+module keybon
 
 go 1.24.3
 
