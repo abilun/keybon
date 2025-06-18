@@ -4,47 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"keybon/generator"
-	"keybon/input"
+	"keybon/ui"
 	"log"
 	"os"
 	"strings"
-
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
-
-var (
-	borderStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("63")).
-		Padding(1, 2)
-)
-
-type model struct {
-	input input.Model
-}
-
-func (m model) Init() tea.Cmd {
-	return m.input.Init()
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			return m, tea.Quit
-		}
-	}
-
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	return m, cmd
-}
-
-func (m model) View() string {
-	return "\n" + borderStyle.Render(m.input.View()) + "\n"
-}
 
 func main() {
 	order := flag.Int("n", 2, "n-gram order (used only when creating a new model)")
@@ -117,13 +81,7 @@ func main() {
 
 	// TUI or plain output
 	if *tui {
-		inp := input.New()
-		inp.SetTarget(text)
-		inp.Focus()
-
-		m := model{input: inp}
-		p := tea.NewProgram(m, tea.WithAltScreen())
-		if err := p.Start(); err != nil {
+		if err := ui.StartMainScreen(text); err != nil {
 			log.Fatalf("TUI failed: %v", err)
 		}
 	} else {

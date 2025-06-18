@@ -10,6 +10,11 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const (
+	defaultWidth  = 100
+	defaultHeight = 5
+)
+
 type Model struct {
 	target  []rune
 	current []rune
@@ -38,11 +43,19 @@ func New() Model {
 		target: []rune(""),
 		pos:    0,
 		Cursor: c,
+		width:  defaultWidth,
+		height: defaultHeight,
 
 		CorrectStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
 		WrongStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Strikethrough(true),
 		PendingStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
 	}
+}
+
+// SetSize() function sets the width and height of the model.
+func (m *Model) SetSize(width, height int) {
+	m.width = width
+	m.height = height
 }
 
 // SetTarget() function sets the target text for the model.
@@ -206,52 +219,131 @@ func (m *Model) deleteWordBackward() {
 
 // View() returns the view of the model.
 func (m Model) View() string {
-	var b strings.Builder
+	height, width := m.height, m.width
 
-	// Determine the maximum length to iterate over both current and target runes
-	maxLen := max(len(m.current), len(m.target))
+	var lines []string
+	var line strings.Builder
+	cursorRendered := false
 
-	for i := 0; i < maxLen; i++ {
+	currentLineWidth := 0
+	currentLineCount := 0
+	i := 0
+
+	// Tokenize as words
+	for i < max(len(m.current), len(m.target)) && currentLineCount < height {
 		var (
-			runeToShow rune
-			style      lipgloss.Style
-			isCursor   = m.Focused() && i == m.pos
+			// wordRunes    []rune
+			wordStr      string
+			wordWidth    int
+			wordIsCursor bool
+			wordBuilder  strings.Builder
 		)
 
-		switch {
-		case i < len(m.current) && i < len(m.target):
-			// User has typed this character — compare with target
-			runeToShow = m.current[i]
-			if runeToShow == m.target[i] {
-				style = m.CorrectStyle
+		// Collect one "word" — space or sequence of non-spaces
+		// start := i
+		for ; i < max(len(m.current), len(m.target)); i++ {
+			var r rune
+			if i < len(m.current) {
+				r = m.current[i]
+			} else if i < len(m.target) {
+				r = m.target[i]
 			} else {
-				style = m.WrongStyle
+				break
 			}
 
-		case i < len(m.target):
-			// User hasn't typed this character yet
-			runeToShow = m.target[i]
-			style = m.PendingStyle
+			// wordRunes = append(wordRunes, r)
 
-		default:
-			// Extra characters beyond target if allowed
-			runeToShow = m.current[i]
-			style = m.WrongStyle
+			isCursor := m.Focused() && i == m.pos
+			if isCursor {
+				wordIsCursor = true
+			}
+
+			var styled string
+			switch {
+			case i < len(m.current) && i < len(m.target):
+				if m.current[i] == m.target[i] {
+					styled = m.CorrectStyle.Render(string(r))
+				} else {
+					styled = m.WrongStyle.Render(string(r))
+				}
+			case i < len(m.target):
+				styled = m.PendingStyle.Render(string(r))
+			default:
+				styled = m.WrongStyle.Render(string(r))
+			}
+
+			if isCursor {
+				m.Cursor.SetChar(string(r))
+				wordBuilder.WriteString(m.Cursor.View())
+			} else {
+				wordBuilder.WriteString(styled)
+			}
+
+			wordWidth += lipgloss.Width(string(r))
+			if unicode.IsSpace(r) {
+				i++ // consume space
+				break
+			}
 		}
+		wordStr = wordBuilder.String()
 
-		// Apply cursor style if cursor is at this position
-		if isCursor {
-			m.Cursor.SetChar(string(runeToShow))
-			b.WriteString(m.Cursor.View())
+		// If word won't fit on current line
+		if currentLineWidth+wordWidth > width {
+			// If word is longer than the line by itself, we must split it
+			if currentLineWidth == 0 {
+				line.WriteString(wordStr[:width]) // cut long word
+				lines = append(lines, line.String())
+				line.Reset()
+				currentLineWidth = 0
+				currentLineCount++
+			} else {
+				// Start new line
+				lines = append(lines, line.String())
+				line.Reset()
+				currentLineWidth = 0
+				currentLineCount++
+
+				if currentLineCount >= height {
+					break
+				}
+
+				line.WriteString(wordStr)
+				currentLineWidth += wordWidth
+			}
 		} else {
-			b.WriteString(style.Render(string(runeToShow)))
+			line.WriteString(wordStr)
+			currentLineWidth += wordWidth
+		}
+
+		if wordIsCursor {
+			cursorRendered = true
 		}
 	}
 
-	// If the cursor is at the very end, show ↵ as a visual end-of-input marker
-	if m.Focused() && m.pos == maxLen {
-		b.WriteString("↵")
+	if currentLineCount < height && line.Len() > 0 {
+		lines = append(lines, line.String())
+		currentLineCount++
 	}
 
-	return b.String()
+	// If cursor is at the very end and wasn't rendered
+	if m.Focused() && !cursorRendered {
+		if len(lines) == 0 {
+			lines = append(lines, "")
+		}
+		lines[len(lines)-1] += "↵"
+	}
+
+	// Pad with empty lines if fixed height is specified
+	if height > 0 {
+		for len(lines) < height {
+			lines = append(lines, "")
+		}
+		// Clip if overflowed
+		if len(lines) > height {
+			lines = lines[:height]
+		}
+	}
+
+	return strings.Join(lines, "\n")
+
 }
