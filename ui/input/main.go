@@ -220,6 +220,7 @@ func (m *Model) deleteWordBackward() {
 
 // View() returns the view of the model.
 func (m Model) View() string {
+	// TODO: add viewport
 	var (
 		lines        []string
 		currentLine  []string
@@ -284,9 +285,13 @@ func (m Model) View() string {
 		lines = append(lines, strings.Join(currentLine, ""))
 	}
 
-	// Pad with empty lines to fill height
-	for len(lines) < m.height {
-		lines = append(lines, "")
+	// Ensure exactly m.height lines
+	if len(lines) < m.height {
+		for len(lines) < m.height {
+			lines = append(lines, "")
+		}
+	} else if len(lines) > m.height {
+		lines = lines[:m.height]
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
