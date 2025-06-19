@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -248,12 +249,14 @@ func (m Model) View() string {
 					style = m.WrongStyle
 				}
 			}
+
 			styled := style.Render(string(r))
 			if pos == m.pos && !cursorPlaced {
 				m.Cursor.SetChar(string(r))
 				styled = m.Cursor.View()
 				cursorPlaced = true
 			}
+
 			chunk.WriteString(styled)
 			chunkWidth += runewidth.RuneWidth(r)
 		}
@@ -271,8 +274,7 @@ func (m Model) View() string {
 		wordBuffer = nil
 	}
 
-	for i := range m.target {
-		r := m.target[i]
+	for i, r := range m.target {
 		wordBuffer = append(wordBuffer, r)
 
 		// if space or last char, flush buffer
@@ -292,6 +294,16 @@ func (m Model) View() string {
 		}
 	} else if len(lines) > m.height {
 		lines = lines[:m.height]
+	}
+
+	// ANSI-aware truncate and pad to exactly m.width
+	for i := range lines {
+		lineWidth := ansi.StringWidth(lines[i])
+		if lineWidth < m.width {
+			lines[i] += strings.Repeat(" ", m.width-lineWidth)
+		} else {
+			lines[i] = ansi.Truncate(lines[i], m.width, "")
+		}
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
