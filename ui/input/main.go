@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 const (
@@ -219,131 +220,74 @@ func (m *Model) deleteWordBackward() {
 
 // View() returns the view of the model.
 func (m Model) View() string {
-	height, width := m.height, m.width
+	var (
+		lines        []string
+		currentLine  []string
+		currentWidth int
+		cursorPlaced bool
+		wordBuffer   []rune
+		startPos     int
+	)
 
-	var lines []string
-	var line strings.Builder
-	cursorRendered := false
+	// Helper to flush wordBuffer as a chunk (word + space)
+	flush := func() {
+		if len(wordBuffer) == 0 {
+			return
+		}
+		var chunk strings.Builder
+		chunkWidth := 0
 
-	currentLineWidth := 0
-	currentLineCount := 0
-	i := 0
-
-	// Tokenize as words
-	for i < max(len(m.current), len(m.target)) && currentLineCount < height {
-		var (
-			// wordRunes    []rune
-			wordStr      string
-			wordWidth    int
-			wordIsCursor bool
-			wordBuilder  strings.Builder
-		)
-
-		// Collect one "word" — space or sequence of non-spaces
-		// start := i
-		for ; i < max(len(m.current), len(m.target)); i++ {
-			var r rune
-			if i < len(m.current) {
-				r = m.current[i]
-			} else if i < len(m.target) {
-				r = m.target[i]
-			} else {
-				break
-			}
-
-			// wordRunes = append(wordRunes, r)
-
-			isCursor := m.Focused() && i == m.pos
-			if isCursor {
-				wordIsCursor = true
-			}
-
-			var styled string
-			switch {
-			case i < len(m.current) && i < len(m.target):
-				if m.current[i] == m.target[i] {
-					styled = m.CorrectStyle.Render(string(r))
+		for i, r := range wordBuffer {
+			style := m.PendingStyle
+			pos := startPos + i
+			if pos < len(m.current) {
+				if m.current[pos] == r {
+					style = m.CorrectStyle
 				} else {
-					styled = m.WrongStyle.Render(string(r))
+					style = m.WrongStyle
 				}
-			case i < len(m.target):
-				styled = m.PendingStyle.Render(string(r))
-			default:
-				styled = m.WrongStyle.Render(string(r))
 			}
-
-			if isCursor {
+			styled := style.Render(string(r))
+			if pos == m.pos && !cursorPlaced {
 				m.Cursor.SetChar(string(r))
-				wordBuilder.WriteString(m.Cursor.View())
-			} else {
-				wordBuilder.WriteString(styled)
+				styled = m.Cursor.View()
+				cursorPlaced = true
 			}
-
-			wordWidth += lipgloss.Width(string(r))
-			if unicode.IsSpace(r) {
-				i++ // consume space
-				break
-			}
-		}
-		wordStr = wordBuilder.String()
-
-		// If word won't fit on current line
-		if currentLineWidth+wordWidth > width {
-			// If word is longer than the line by itself, we must split it
-			if currentLineWidth == 0 {
-				line.WriteString(wordStr[:width]) // cut long word
-				lines = append(lines, line.String())
-				line.Reset()
-				currentLineWidth = 0
-				currentLineCount++
-			} else {
-				// Start new line
-				lines = append(lines, line.String())
-				line.Reset()
-				currentLineWidth = 0
-				currentLineCount++
-
-				if currentLineCount >= height {
-					break
-				}
-
-				line.WriteString(wordStr)
-				currentLineWidth += wordWidth
-			}
-		} else {
-			line.WriteString(wordStr)
-			currentLineWidth += wordWidth
+			chunk.WriteString(styled)
+			chunkWidth += runewidth.RuneWidth(r)
 		}
 
-		if wordIsCursor {
-			cursorRendered = true
+		// If chunk won't fit, flush line and start new one
+		if currentWidth+chunkWidth > m.width {
+			lines = append(lines, strings.Join(currentLine, ""))
+			currentLine = nil
+			currentWidth = 0
+		}
+
+		currentLine = append(currentLine, chunk.String())
+		currentWidth += chunkWidth
+		startPos += len(wordBuffer)
+		wordBuffer = nil
+	}
+
+	for i := range m.target {
+		r := m.target[i]
+		wordBuffer = append(wordBuffer, r)
+
+		// if space or last char, flush buffer
+		if unicode.IsSpace(r) || i == len(m.target)-1 {
+			flush()
 		}
 	}
 
-	if currentLineCount < height && line.Len() > 0 {
-		lines = append(lines, line.String())
-		currentLineCount++
+	if len(currentLine) > 0 {
+		lines = append(lines, strings.Join(currentLine, ""))
 	}
 
-	// If cursor is at the very end and wasn't rendered
-	if m.Focused() && !cursorRendered {
-		if len(lines) == 0 {
-			lines = append(lines, "")
-		}
-		lines[len(lines)-1] += "↵"
+	// Pad with empty lines to fill height
+	for len(lines) < m.height {
+		lines = append(lines, "")
 	}
 
-	// Pad with empty lines if fixed height is specified
-	if height > 0 {
-		for len(lines) < height {
-			lines = append(lines, "")
-		}
-		// Clip if overflowed
-		if len(lines) > height {
-			lines = lines[:height]
-		}
-	}
-
-	return strings.Join(lines, "\n")
-
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
