@@ -126,7 +126,7 @@ func (m *Model) CursorEnd() {
 
 // AtEnd() function returns true if the cursor is at the end of the text.
 func (m *Model) AtEnd() bool {
-	return m.pos == len(m.current)
+	return m.pos == len(m.target)
 }
 
 // Update() function updates the model based on the message.
