@@ -10,17 +10,23 @@ import (
 
 var (
 	borderStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("63")).
-		Padding(0, 0)
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("63"))
+	greaterStyle = lipgloss.NewStyle().
+			Background(lipgloss.Color("63")).
+			Align(lipgloss.Center)
 )
 
 type mainScreen struct {
-	input input.Model
+	Input  input.Model
+	height int
+	width  int
 }
 
 func (m mainScreen) Init() tea.Cmd {
-	return m.input.Init()
+	return tea.Batch(
+		m.Input.Init(),
+	)
 }
 
 func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -30,30 +36,47 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 		}
+
+	case tea.WindowSizeMsg:
+		m.height = msg.Height
+		m.width = msg.Width
+		return m, nil
 	}
 
+	var cmds []tea.Cmd
+
 	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	return m, cmd
+	m.Input, cmd = m.Input.Update(msg)
+	cmds = append(cmds, cmd)
+	cmds = append(cmds, cmd)
+
+	return m, tea.Batch(cmds...)
 }
 
 func (m mainScreen) View() string {
 	b := strings.Builder{}
 
+	inputView := m.Input.View()
+	inputViewBorder := borderStyle.Render(inputView)
+	b.WriteString(greaterStyle.Width(lipgloss.Width(inputViewBorder)).Render("Keybon"))
 	b.WriteString("\n")
-	b.WriteString(borderStyle.Render(m.input.View()))
-	b.WriteString("\n")
+	b.WriteString(inputViewBorder)
 
-	return b.String()
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, b.String())
+}
+
+func New() mainScreen {
+	input := input.New()
+	input.Focus()
+
+	return mainScreen{
+		Input: input,
+	}
 }
 
 func StartMainScreen(text string) error {
-	inp := input.New()
-	inp.SetTarget(text)
-	inp.Focus()
-	inp.SetSize(50, 5)
-
-	ms := mainScreen{input: inp}
+	ms := New()
+	ms.Input.SetTarget(text)
 
 	p := tea.NewProgram(
 		ms,
