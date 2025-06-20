@@ -41,13 +41,16 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		m.width = msg.Width
 		return m, nil
+
+	case input.InputCompleteMsg:
+		// TODO: results screen
+		return m, tea.Quit
 	}
 
 	var cmds []tea.Cmd
 
 	var cmd tea.Cmd
 	m.Input, cmd = m.Input.Update(msg)
-	cmds = append(cmds, cmd)
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)

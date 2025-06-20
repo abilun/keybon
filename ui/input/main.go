@@ -38,7 +38,6 @@ type Model struct {
 // New() function creates a new Model with predefined styles.
 func New() Model {
 	c := cursor.New()
-	// c.SetMode(cursor.CursorStatic) // or CursorBlink
 	c.SetMode(cursor.CursorBlink)
 
 	return Model{
@@ -157,9 +156,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				}
 			}
 		}
-
-	case tea.WindowSizeMsg:
-		// Ignore for now
 	}
 
 	var cmds []tea.Cmd
@@ -171,6 +167,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	if oldPos != m.pos && m.Cursor.Mode() == cursor.CursorBlink {
 		m.Cursor.Blink = false
 		cmds = append(cmds, m.Cursor.BlinkCmd())
+	}
+
+	if m.AtEnd() {
+		cmd = func() tea.Msg {
+			return InputCompleteMsg{}
+		}
+		cmds = append(cmds, cmd)
 	}
 
 	return m, tea.Batch(cmds...)
