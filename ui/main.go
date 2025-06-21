@@ -2,6 +2,7 @@ package ui
 
 import (
 	"keybon/ui/input"
+	"keybon/ui/results"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -17,55 +18,83 @@ var (
 			Align(lipgloss.Center)
 )
 
+type State int
+
+const (
+	mainView State = iota
+	resultsView
+)
+
 type mainScreen struct {
-	Input  input.Model
+	state State
+
+	input   input.Model
+	results results.Model
+
 	height int
 	width  int
 }
 
 func (m mainScreen) Init() tea.Cmd {
 	return tea.Batch(
-		m.Input.Init(),
+		m.input.Init(),
+		m.results.Init(),
 	)
 }
 
 func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC, tea.KeyEsc:
-			return m, tea.Quit
-		}
+	case input.InputCompleteMsg:
+		m.input.Reset()
+		m.state = resultsView
+
+	case results.BackMsg:
+		m.state = mainView
 
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-		return m, nil
-
-	case input.InputCompleteMsg:
-		// TODO: results screen
-		return m, tea.Quit
+		// return m, nil // Should I return?
 	}
 
-	var cmds []tea.Cmd
-
-	var cmd tea.Cmd
-	m.Input, cmd = m.Input.Update(msg)
-	cmds = append(cmds, cmd)
+	switch m.state {
+	case resultsView:
+		m.results, cmd = m.results.Update(msg)
+		cmds = append(cmds, cmd)
+	case mainView:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyCtrlC, tea.KeyEsc:
+				return m, tea.Quit
+			}
+		}
+		m.input, cmd = m.input.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
 	return m, tea.Batch(cmds...)
 }
 
 func (m mainScreen) View() string {
 	b := strings.Builder{}
+	var view string
 
-	inputView := m.Input.View()
-	inputViewBorder := borderStyle.Render(inputView)
-	b.WriteString(greaterStyle.Width(lipgloss.Width(inputViewBorder)).Render("Keybon"))
-	b.WriteString("\n")
-	b.WriteString(inputViewBorder)
+	switch m.state {
+	case resultsView:
+		view = borderStyle.Render(m.results.View())
+	case mainView:
+		inputViewBorder := borderStyle.Render(m.input.View())
+		b.WriteString(greaterStyle.Width(lipgloss.Width(inputViewBorder)).Render("Keybon"))
+		b.WriteString("\n")
+		b.WriteString(inputViewBorder)
+		view = b.String()
+	}
 
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, b.String())
+	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, view)
 }
 
 func New() mainScreen {
@@ -73,20 +102,23 @@ func New() mainScreen {
 	input.Focus()
 
 	return mainScreen{
-		Input: input,
+		input: input,
+		state: mainView,
 	}
 }
 
 func StartMainScreen(text string) error {
 	ms := New()
-	ms.Input.SetTarget(text)
+	ms.input.SetTarget(text)
 
 	p := tea.NewProgram(
 		ms,
 		tea.WithAltScreen(),
 	)
+
 	if _, err := p.Run(); err != nil {
 		return err
 	}
+
 	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"keybon/generator"
-	"keybon/ui"
+	ui "keybon/ui"
 	"log"
 	"os"
 	"strings"

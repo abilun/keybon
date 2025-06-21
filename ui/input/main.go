@@ -12,6 +12,8 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
+// TODO: look into -> ctrl + w removes word based on current text
+
 const (
 	defaultWidth  = 100
 	defaultHeight = 5
@@ -51,6 +53,12 @@ func New() Model {
 		WrongStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Strikethrough(true),
 		PendingStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
 	}
+}
+
+// Reset() function resets cursor position and current text.
+func (m *Model) Reset() {
+	m.pos = 0
+	m.current = []rune("")
 }
 
 // SetSize() function sets the width and height of the model.
