@@ -1,12 +1,19 @@
 package results
 
 import (
-	"strings"
+	"fmt"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
-type Model struct{}
+type Model struct {
+	KeysPressedTotal   int
+	KeysPressedCorrect int
+	Accuracy           float32
+	Duration           time.Duration
+}
 
 func (m Model) Init() tea.Cmd {
 	return nil
@@ -33,7 +40,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	sb := strings.Builder{}
-	sb.WriteString("Results")
-	return sb.String()
+	lines := []string{
+		"Results",
+		fmt.Sprintf("Keys pressed: %d", m.KeysPressedTotal),
+		fmt.Sprintf("Keys pressed correct: %d", m.KeysPressedCorrect),
+		fmt.Sprintf("Accuracy: %.2f%%", m.Accuracy),
+		fmt.Sprintf("Duration: %.2f seconds", m.Duration.Seconds())}
+
+	return lipgloss.JoinVertical(lipgloss.Center, lines...)
+
 }

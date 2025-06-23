@@ -2,6 +2,7 @@ package input
 
 import (
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/charmbracelet/bubbles/cursor"
@@ -140,34 +141,55 @@ func (m *Model) AtEnd() bool {
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	// Let's remember where the position of the cursor currently is so that if
 	// the cursor position changes, we can reset the blink.
+	var cmds []tea.Cmd
+	var cmd tea.Cmd
+
 	oldPos := m.pos
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		isCorrect := false
+
 		switch {
 		case !m.Focused():
 			return m, nil
 
 		case key.Matches(msg, key.NewBinding(key.WithKeys("ctrl+w"))):
 			m.deleteWordBackward()
-			// m.deleteWord()
 		case key.Matches(msg, key.NewBinding(key.WithKeys("backspace"))):
 			m.deleteRune()
 		case key.Matches(msg, key.NewBinding(key.WithKeys("left"))):
 			m.CursorLeft()
 		case key.Matches(msg, key.NewBinding(key.WithKeys("right"))):
 			m.CursorRight()
+			// Typing: compare against target *before* inserting
 		case msg.Type == tea.KeyRunes || msg.Type == tea.KeySpace:
 			for _, r := range msg.Runes {
 				if m.pos < len(m.target) {
+					expected := m.target[m.pos]
 					m.insertRune(r)
+					if r == expected {
+						isCorrect = true
+					}
 				}
 			}
 		}
-	}
 
-	var cmds []tea.Cmd
-	var cmd tea.Cmd
+		// backspace or ctrl+w should mark as backspace msg
+		isBack := msg.Type == tea.KeyBackspace || msg.Type == tea.KeyCtrlW
+
+		cmd = func() tea.Msg {
+			return KeystrokeProcessedMsg{
+				// ExpectedChar: m.target[m.pos],
+				TypedChar:   msg.Runes,
+				IsCorrect:   isCorrect,
+				IsBackspace: isBack,
+				Position:    m.pos,
+				Timestamp:   time.Now(),
+			}
+		}
+		cmds = append(cmds, cmd)
+	}
 
 	m.Cursor, cmd = m.Cursor.Update(msg)
 	cmds = append(cmds, cmd)

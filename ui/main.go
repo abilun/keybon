@@ -28,8 +28,10 @@ const (
 type mainScreen struct {
 	state State
 
-	input   input.Model
-	results results.Model
+	typingSession TypingSession
+
+	input         input.Model
+	resultsScreen results.Model
 
 	height int
 	width  int
@@ -38,7 +40,7 @@ type mainScreen struct {
 func (m mainScreen) Init() tea.Cmd {
 	return tea.Batch(
 		m.input.Init(),
-		m.results.Init(),
+		m.resultsScreen.Init(),
 	)
 }
 
@@ -51,18 +53,40 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.input.Reset()
 		m.state = resultsView
 
+		stats := m.typingSession.Stats()
+
+		m.resultsScreen = results.Model{
+			KeysPressedTotal:   stats.KeysPressedTotal,
+			KeysPressedCorrect: stats.KeysPressedCorrect,
+			Accuracy:           stats.Accuracy,
+			Duration:           stats.Duration,
+		}
+
 	case results.BackMsg:
 		m.state = mainView
+		m.resultsScreen = results.Model{}
+		m.typingSession = TypingSession{}
 
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
 		// return m, nil // Should I return?
+
+	case input.KeystrokeProcessedMsg:
+		// Keystroke message is not a keystroke in a scope of typing session
+		keystroke := Keystroke{
+			Position:    msg.Position,
+			TypedChar:   msg.TypedChar,
+			IsCorrect:   msg.IsCorrect,
+			IsBackspace: msg.IsBackspace,
+			Timestamp:   msg.Timestamp,
+		}
+		m.typingSession.Keystrokes = append(m.typingSession.Keystrokes, keystroke)
 	}
 
 	switch m.state {
 	case resultsView:
-		m.results, cmd = m.results.Update(msg)
+		m.resultsScreen, cmd = m.resultsScreen.Update(msg)
 		cmds = append(cmds, cmd)
 	case mainView:
 		switch msg := msg.(type) {
@@ -85,7 +109,7 @@ func (m mainScreen) View() string {
 
 	switch m.state {
 	case resultsView:
-		view = borderStyle.Render(m.results.View())
+		view = borderStyle.Render(m.resultsScreen.View())
 	case mainView:
 		inputViewBorder := borderStyle.Render(m.input.View())
 		b.WriteString(greaterStyle.Width(lipgloss.Width(inputViewBorder)).Render("Keybon"))
