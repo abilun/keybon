@@ -74,6 +74,11 @@ func (m *Model) SetTarget(target string) {
 	m.target = []rune(target)
 }
 
+// GetTarget() function gets the target text for the model.
+func (m *Model) GetTarget() string {
+	return string(m.target)
+}
+
 // SetCurrent() function sets the current text for the model.
 func (m *Model) SetCurrent(current string) {
 	m.current = []rune(current)

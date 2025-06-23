@@ -9,15 +9,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-var (
-	borderStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("63"))
-	greaterStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("63")).
-			Align(lipgloss.Center)
-)
-
 type State int
 
 const (
@@ -52,7 +43,8 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case input.InputCompleteMsg:
 		m.input.Reset()
 		m.state = resultsView
-
+		// TODO: worth setting somewhere else to decouple session from input
+		m.typingSession.TargetText = m.input.GetTarget()
 		stats := m.typingSession.Stats()
 
 		m.resultsScreen = results.Model{
@@ -60,17 +52,17 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			KeysPressedCorrect: stats.KeysPressedCorrect,
 			Accuracy:           stats.Accuracy,
 			Duration:           stats.Duration,
+			WPM:                stats.WPM,
 		}
 
 	case results.BackMsg:
 		m.state = mainView
-		m.resultsScreen = results.Model{}
-		m.typingSession = TypingSession{}
+		m.resultsScreen.Reset()
+		m.typingSession.Reset()
 
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
 		m.width = msg.Width
-		// return m, nil // Should I return?
 
 	case input.KeystrokeProcessedMsg:
 		// Keystroke message is not a keystroke in a scope of typing session
@@ -81,7 +73,7 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			IsBackspace: msg.IsBackspace,
 			Timestamp:   msg.Timestamp,
 		}
-		m.typingSession.Keystrokes = append(m.typingSession.Keystrokes, keystroke)
+		m.typingSession.AddKeystroke(keystroke)
 	}
 
 	switch m.state {
@@ -139,6 +131,19 @@ func StartMainScreen(text string) error {
 		ms,
 		tea.WithAltScreen(),
 	)
+
+	// f, err := tea.LogToFile("/tmp/debug.log", "debug")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer f.Close()
+
+	// slog.SetDefault(slog.New(
+	// 	slog.NewTextHandler(
+	// 		f,
+	// 		&slog.HandlerOptions{
+	// 			Level: slog.LevelDebug,
+	// 		})))
 
 	if _, err := p.Run(); err != nil {
 		return err

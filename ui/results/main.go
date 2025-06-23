@@ -13,13 +13,12 @@ type Model struct {
 	KeysPressedCorrect int
 	Accuracy           float32
 	Duration           time.Duration
+	WPM                float64
 }
 
 func (m Model) Init() tea.Cmd {
 	return nil
 }
-
-type BackMsg struct{}
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -42,11 +41,19 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 func (m Model) View() string {
 	lines := []string{
 		"Results",
+		"",
 		fmt.Sprintf("Keys pressed: %d", m.KeysPressedTotal),
 		fmt.Sprintf("Keys pressed correct: %d", m.KeysPressedCorrect),
 		fmt.Sprintf("Accuracy: %.2f%%", m.Accuracy),
-		fmt.Sprintf("Duration: %.2f seconds", m.Duration.Seconds())}
+		fmt.Sprintf("Duration: %.2f seconds", m.Duration.Seconds()),
+		"",
+		fmt.Sprintf("WPM: %.2f", m.WPM),
+	}
 
 	return lipgloss.JoinVertical(lipgloss.Center, lines...)
 
+}
+
+func (m *Model) Reset() {
+	*m = Model{}
 }
