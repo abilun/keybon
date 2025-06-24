@@ -41,7 +41,7 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case input.InputCompleteMsg:
-		m.input.Reset()
+		m.typingSession.TypedText = msg.TypedText
 		m.state = resultsView
 		// TODO: worth setting somewhere else to decouple session from input
 		m.typingSession.TargetText = m.input.GetTarget()
@@ -139,7 +139,7 @@ func StartMainScreen(text string) error {
 	// defer f.Close()
 
 	// slog.SetDefault(slog.New(
-	// 	slog.NewTextHandler(
+	// 	slog.NewJSONHandler(
 	// 		f,
 	// 		&slog.HandlerOptions{
 	// 			Level: slog.LevelDebug,

@@ -3,11 +3,13 @@ package ui
 import (
 	"strings"
 	"time"
+	"unicode"
 )
 
 type TypingSession struct {
 	Keystrokes []Keystroke
 	TargetText string
+	TypedText  string
 }
 
 func (ts *TypingSession) Start(targetText string) {
@@ -68,7 +70,7 @@ func (ts *TypingSession) calculateSessionWPM() float64 {
 	}
 
 	expectedText := ts.TargetText
-	counter := NewWPMCounter(expectedText)
+	counter := NewWPMCounter(expectedText, ts.TypedText)
 	wordResults := counter.AnalyzeWords(ts.Keystrokes)
 
 	// Get session timing
@@ -104,7 +106,6 @@ func (w *WPMCounter) CalculateWPM(wordResults []WordResult, startTime, endTime t
 		return 0
 	}
 
-	// WPM = (correct characters / 5) / minutes
 	return float64(correctChars) / 5.0 / minutes
 }
 
@@ -112,10 +113,7 @@ func (w *WPMCounter) analyzeWord(bound WordBoundary, finalText string, keystroke
 	// Get the word from final typed text
 	var typedWord string
 	if bound.StartPos < len(finalText) {
-		endPos := bound.EndPos
-		if endPos > len(finalText) {
-			endPos = len(finalText)
-		}
+		endPos := min(bound.EndPos, len(finalText))
 		typedWord = finalText[bound.StartPos:endPos]
 	}
 
@@ -154,6 +152,7 @@ type WordResult struct {
 
 type WPMCounter struct {
 	expectedText string
+	typedText    string
 	words        []string
 	wordBounds   []WordBoundary
 }
@@ -165,9 +164,10 @@ type WordBoundary struct {
 }
 
 // NewWPMCounter() creates a counter for the given text
-func NewWPMCounter(expectedText string) *WPMCounter {
+func NewWPMCounter(expectedText string, typedText string) *WPMCounter {
 	counter := &WPMCounter{
 		expectedText: expectedText,
+		typedText:    typedText,
 		words:        strings.Fields(expectedText),
 	}
 	counter.calculateWordBoundaries()
@@ -177,23 +177,27 @@ func NewWPMCounter(expectedText string) *WPMCounter {
 // calculateWordBoundaries() finds start/end positions of each word
 func (w *WPMCounter) calculateWordBoundaries() {
 	pos := 0
+	runes := []rune(w.expectedText)
+
 	for _, word := range w.words {
+		wordRunes := []rune(word)
+
 		// Find word start position accounting for spaces
-		for pos < len(w.expectedText) && w.expectedText[pos] == ' ' {
+		for pos < len(runes) && unicode.IsSpace(runes[pos]) {
 			pos++
 		}
 
-		if pos >= len(w.expectedText) {
+		if pos >= len(runes) {
 			break
 		}
 
 		w.wordBounds = append(w.wordBounds, WordBoundary{
 			StartPos: pos,
-			EndPos:   pos + len(word),
+			EndPos:   pos + len(wordRunes),
 			Word:     word,
 		})
 
-		pos += len(word)
+		pos += len(wordRunes)
 	}
 }
 
@@ -202,7 +206,7 @@ func (w *WPMCounter) AnalyzeWords(keystrokes []Keystroke) []WordResult {
 	var results []WordResult
 
 	// Build final typed text by simulating all keystrokes
-	finalText := w.buildFinalText(keystrokes)
+	finalText := w.typedText
 
 	for _, bound := range w.wordBounds {
 		result := w.analyzeWord(bound, finalText, keystrokes)
@@ -210,21 +214,4 @@ func (w *WPMCounter) AnalyzeWords(keystrokes []Keystroke) []WordResult {
 	}
 
 	return results
-}
-
-// buildFinalText() simulates typing to get the final result
-func (w *WPMCounter) buildFinalText(keystrokes []Keystroke) string {
-	var text []rune
-
-	for _, ks := range keystrokes {
-		if ks.IsBackspace {
-			if len(text) > 0 {
-				text = text[:len(text)-1]
-			}
-		} else {
-			text = append(text, ks.TypedChar...)
-		}
-	}
-
-	return string(text)
 }
