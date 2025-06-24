@@ -13,8 +13,6 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-// TODO: look into -> ctrl + w removes word based on current text
-
 const (
 	defaultWidth  = 100
 	defaultHeight = 5
@@ -245,11 +243,11 @@ func (m *Model) deleteWordBackward() {
 	oldPos := m.pos
 	start := oldPos
 	// skip spaces
-	for start > 0 && unicode.IsSpace(m.current[start-1]) {
+	for start > 0 && unicode.IsSpace(m.target[start-1]) {
 		start--
 	}
 	// find start of word
-	for start > 0 && !unicode.IsSpace(m.current[start-1]) {
+	for start > 0 && !unicode.IsSpace(m.target[start-1]) {
 		start--
 	}
 	// start now points to the start of the word
