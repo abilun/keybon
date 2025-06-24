@@ -77,6 +77,11 @@ func (m *Model) GetTarget() string {
 	return string(m.target)
 }
 
+// GetCurrent() function gets the current text for the model.
+func (m *Model) GetCurrent() string {
+	return string(m.current)
+}
+
 // SetCurrent() function sets the current text for the model.
 func (m *Model) SetCurrent(current string) {
 	m.current = []rune(current)
@@ -108,7 +113,7 @@ func (m Model) Init() tea.Cmd {
 
 // SetCursor() function sets the cursor position.
 func (m *Model) SetCursor(pos int) {
-	m.pos = pos
+	m.pos = clamp(pos, 0, len(m.current))
 }
 
 // Position() function returns the cursor position.
@@ -152,14 +157,17 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		isCorrect := false
+		isBack := false
 
 		switch {
 		case !m.Focused():
 			return m, nil
 
 		case key.Matches(msg, key.NewBinding(key.WithKeys("ctrl+w"))):
+			isBack = true
 			m.deleteWordBackward()
 		case key.Matches(msg, key.NewBinding(key.WithKeys("backspace"))):
+			isBack = true
 			m.deleteRune()
 		case key.Matches(msg, key.NewBinding(key.WithKeys("left"))):
 			m.CursorLeft()
@@ -177,9 +185,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				}
 			}
 		}
-
-		// backspace or ctrl+w should mark as backspace msg
-		isBack := msg.Type == tea.KeyBackspace || msg.Type == tea.KeyCtrlW
 
 		cmd = func() tea.Msg {
 			return KeystrokeProcessedMsg{
@@ -203,9 +208,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	if m.AtEnd() {
+		typed := string(m.current)
 		cmd = func() tea.Msg {
-			return InputCompleteMsg{}
+			return InputCompleteMsg{
+				TypedText: typed,
+			}
 		}
+		m.Reset()
 		cmds = append(cmds, cmd)
 	}
 
