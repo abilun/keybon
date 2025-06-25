@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"keybon/generator"
-	ui "keybon/ui"
+
+	"keybon/internal/ngram/generator"
+	"keybon/internal/ui"
 	"log"
 	"os"
 	"strings"

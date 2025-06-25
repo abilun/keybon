@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"keybon/scanner"
+	"keybon/internal/scanner"
 	"strings"
 
 	"github.com/klauspost/compress/zstd"

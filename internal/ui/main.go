@@ -1,8 +1,9 @@
 package ui
 
 import (
-	"keybon/ui/input"
-	"keybon/ui/results"
+	"keybon/internal/typing"
+	"keybon/internal/ui/input"
+	"keybon/internal/ui/results"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,7 +20,7 @@ const (
 type mainScreen struct {
 	state State
 
-	typingSession TypingSession
+	typingSession typing.TypingSession
 
 	input         input.Model
 	resultsScreen results.Model
@@ -66,7 +67,7 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case input.KeystrokeProcessedMsg:
 		// Keystroke message is not a keystroke in a scope of typing session
-		keystroke := Keystroke{
+		keystroke := typing.Keystroke{
 			Position:    msg.Position,
 			TypedChar:   msg.TypedChar,
 			IsCorrect:   msg.IsCorrect,

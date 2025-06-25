@@ -1,4 +1,4 @@
-package ui
+package typing
 
 import (
 	"strings"
@@ -169,6 +169,7 @@ func NewWPMCounter(expectedText string, typedText string) *WPMCounter {
 		expectedText: expectedText,
 		typedText:    typedText,
 		words:        strings.Fields(expectedText),
+		wordBounds:   []WordBoundary{},
 	}
 	counter.calculateWordBoundaries()
 	return counter
