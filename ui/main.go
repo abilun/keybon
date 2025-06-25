@@ -44,7 +44,7 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.typingSession.TypedText = msg.TypedText
 		m.state = resultsView
 		// TODO: worth setting somewhere else to decouple session from input
-		m.typingSession.TargetText = m.input.GetTarget()
+		m.typingSession.ExpectedText = m.input.GetExpectedText()
 		stats := m.typingSession.Stats()
 
 		m.resultsScreen = results.Model{
@@ -125,7 +125,7 @@ func New() mainScreen {
 
 func StartMainScreen(text string) error {
 	ms := New()
-	ms.input.SetTarget(text)
+	ms.input.SetExpectedText(text)
 
 	p := tea.NewProgram(
 		ms,

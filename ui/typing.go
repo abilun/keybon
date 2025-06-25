@@ -7,18 +7,18 @@ import (
 )
 
 type TypingSession struct {
-	Keystrokes []Keystroke
-	TargetText string
-	TypedText  string
+	Keystrokes   []Keystroke
+	ExpectedText string
+	TypedText    string
 }
 
-func (ts *TypingSession) Start(targetText string) {
-	ts.TargetText = targetText
+func (ts *TypingSession) Start(expectedText string) {
+	ts.ExpectedText = expectedText
 }
 
 func (ts *TypingSession) Reset() {
 	ts.Keystrokes = []Keystroke{}
-	ts.TargetText = ""
+	ts.ExpectedText = ""
 }
 
 func (ts *TypingSession) AddKeystroke(k Keystroke) {
@@ -69,7 +69,7 @@ func (ts *TypingSession) calculateSessionWPM() float64 {
 		return 0
 	}
 
-	expectedText := ts.TargetText
+	expectedText := ts.ExpectedText
 	counter := NewWPMCounter(expectedText, ts.TypedText)
 	wordResults := counter.AnalyzeWords(ts.Keystrokes)
 

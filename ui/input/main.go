@@ -19,8 +19,8 @@ const (
 )
 
 type Model struct {
-	target  []rune
-	current []rune
+	expectedText []rune
+	typedText    []rune
 
 	height int
 	width  int
@@ -42,11 +42,11 @@ func New() Model {
 	c.SetMode(cursor.CursorBlink)
 
 	return Model{
-		target: []rune(""),
-		pos:    0,
-		Cursor: c,
-		width:  defaultWidth,
-		height: defaultHeight,
+		expectedText: []rune(""),
+		pos:          0,
+		Cursor:       c,
+		width:        defaultWidth,
+		height:       defaultHeight,
 
 		CorrectStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
 		WrongStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Strikethrough(true),
@@ -54,10 +54,10 @@ func New() Model {
 	}
 }
 
-// Reset() function resets cursor position and current text.
+// Reset() function resets cursor position and typed text.
 func (m *Model) Reset() {
 	m.pos = 0
-	m.current = []rune("")
+	m.typedText = []rune("")
 }
 
 // SetSize() function sets the width and height of the model.
@@ -66,25 +66,25 @@ func (m *Model) SetSize(width, height int) {
 	m.height = height
 }
 
-// SetTarget() function sets the target text for the model.
-func (m *Model) SetTarget(target string) {
+// SetExpectedText() function sets the expected text for the model.
+func (m *Model) SetExpectedText(expected string) {
 	// todo: sanitize
-	m.target = []rune(target)
+	m.expectedText = []rune(expected)
 }
 
-// GetTarget() function gets the target text for the model.
-func (m *Model) GetTarget() string {
-	return string(m.target)
+// GetExpectedText() function gets the expected text for the model.
+func (m *Model) GetExpectedText() string {
+	return string(m.expectedText)
 }
 
-// GetCurrent() function gets the current text for the model.
-func (m *Model) GetCurrent() string {
-	return string(m.current)
+// GetTypedText() function gets the current text for the model.
+func (m *Model) GetTypedText() string {
+	return string(m.typedText)
 }
 
-// SetCurrent() function sets the current text for the model.
-func (m *Model) SetCurrent(current string) {
-	m.current = []rune(current)
+// SetTypedText() function sets the current text for the model.
+func (m *Model) SetTypedText(current string) {
+	m.typedText = []rune(current)
 }
 
 // Focus() function sets the focus to the model.
@@ -113,7 +113,7 @@ func (m Model) Init() tea.Cmd {
 
 // SetCursor() function sets the cursor position.
 func (m *Model) SetCursor(pos int) {
-	m.pos = clamp(pos, 0, len(m.current))
+	m.pos = clamp(pos, 0, len(m.typedText))
 }
 
 // Position() function returns the cursor position.
@@ -130,19 +130,19 @@ func (m *Model) CursorLeft() {
 
 // CursorRight() function moves the cursor to the right.
 func (m *Model) CursorRight() {
-	if m.pos < len(m.current) {
+	if m.pos < len(m.typedText) {
 		m.pos++
 	}
 }
 
 // CursorEnd() function moves the cursor to the end of the text.
 func (m *Model) CursorEnd() {
-	m.SetCursor(len(m.current))
+	m.SetCursor(len(m.typedText))
 }
 
 // AtEnd() function returns true if the cursor is at the end of the text.
 func (m *Model) AtEnd() bool {
-	return m.pos == len(m.target)
+	return m.pos == len(m.expectedText)
 }
 
 // Update() function updates the model based on the message.
@@ -176,8 +176,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			// Typing: compare against target *before* inserting
 		case msg.Type == tea.KeyRunes || msg.Type == tea.KeySpace:
 			for _, r := range msg.Runes {
-				if m.pos < len(m.target) {
-					expected := m.target[m.pos]
+				if m.pos < len(m.expectedText) {
+					expected := m.expectedText[m.pos]
 					m.insertRune(r)
 					if r == expected {
 						isCorrect = true
@@ -188,7 +188,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 		cmd = func() tea.Msg {
 			return KeystrokeProcessedMsg{
-				// ExpectedChar: m.target[m.pos],
 				TypedChar:   msg.Runes,
 				IsCorrect:   isCorrect,
 				IsBackspace: isBack,
@@ -208,7 +207,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	if m.AtEnd() {
-		typed := string(m.current)
+		typed := string(m.typedText)
 		cmd = func() tea.Msg {
 			return InputCompleteMsg{
 				TypedText: typed,
@@ -226,18 +225,18 @@ func (m *Model) insertRune(r rune) {
 	if r == 0 {
 		return
 	}
-	before := m.current[:m.pos]
-	after := m.current[m.pos:]
-	m.current = append(before, append([]rune{r}, after...)...)
+	before := m.typedText[:m.pos]
+	after := m.typedText[m.pos:]
+	m.typedText = append(before, append([]rune{r}, after...)...)
 	m.pos++
 }
 
 // deleteRune() deletes a rune at the cursor position.
 func (m *Model) deleteRune() {
-	if m.pos <= 0 || len(m.current) == 0 {
+	if m.pos <= 0 || len(m.typedText) == 0 {
 		return
 	}
-	m.current = append(m.current[:m.pos-1], m.current[m.pos:]...)
+	m.typedText = append(m.typedText[:m.pos-1], m.typedText[m.pos:]...)
 	m.pos--
 }
 
@@ -252,15 +251,15 @@ func (m *Model) deleteWordBackward() {
 	oldPos := m.pos
 	start := oldPos
 	// skip spaces
-	for start > 0 && unicode.IsSpace(m.target[start-1]) {
+	for start > 0 && unicode.IsSpace(m.expectedText[start-1]) {
 		start--
 	}
 	// find start of word
-	for start > 0 && !unicode.IsSpace(m.target[start-1]) {
+	for start > 0 && !unicode.IsSpace(m.expectedText[start-1]) {
 		start--
 	}
 	// start now points to the start of the word
-	m.current = append(m.current[:start], m.current[oldPos:]...)
+	m.typedText = append(m.typedText[:start], m.typedText[oldPos:]...)
 	m.pos = start
 }
 
@@ -287,8 +286,8 @@ func (m Model) View() string {
 		for i, r := range wordBuffer {
 			style := m.PendingStyle
 			pos := startPos + i
-			if pos < len(m.current) {
-				if m.current[pos] == r {
+			if pos < len(m.typedText) {
+				if m.typedText[pos] == r {
 					style = m.CorrectStyle
 				} else {
 					style = m.WrongStyle
@@ -319,11 +318,11 @@ func (m Model) View() string {
 		wordBuffer = nil
 	}
 
-	for i, r := range m.target {
+	for i, r := range m.expectedText {
 		wordBuffer = append(wordBuffer, r)
 
 		// if space or last char, flush buffer
-		if unicode.IsSpace(r) || i == len(m.target)-1 {
+		if unicode.IsSpace(r) || i == len(m.expectedText)-1 {
 			flush()
 		}
 	}
