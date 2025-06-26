@@ -1,4 +1,4 @@
-package generator
+package ngram
 
 import "math/rand"
 

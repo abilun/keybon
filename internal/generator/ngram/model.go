@@ -1,4 +1,4 @@
-package model
+package ngram
 
 import (
 	"crypto/sha256"

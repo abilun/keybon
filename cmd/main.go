@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/abilun/keybon/internal/ngram/generator"
+	"github.com/abilun/keybon/internal/generator/ngram"
 	"github.com/abilun/keybon/internal/ui"
 )
 
@@ -22,7 +22,7 @@ func main() {
 
 	flag.Parse()
 
-	var ng *generator.NgramGenerator
+	var ng *ngram.Generator
 
 	if *loadPath != "" {
 		f, err := os.Open(*loadPath)
@@ -31,7 +31,7 @@ func main() {
 		}
 		defer f.Close()
 
-		ng = generator.New(*order)
+		ng = ngram.NewGenerator(*order)
 		if err := ng.Load(f); err != nil {
 			log.Fatalf("failed to decode model: %v", err)
 		}
@@ -39,7 +39,7 @@ func main() {
 		if *order < 1 {
 			log.Fatalf("n-gram order must be at least 1")
 		}
-		ng = generator.New(*order)
+		ng = ngram.NewGenerator(*order)
 	}
 
 	if *file != "" {

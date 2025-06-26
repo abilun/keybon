@@ -1,27 +1,25 @@
-package generator
+package ngram
 
 import (
 	"errors"
 
 	"strings"
-
-	"github.com/abilun/keybon/internal/ngram/model"
 )
 
-type NgramGenerator struct {
-	*model.Model
+type Generator struct {
+	*Model
 	history  []string
 	nextFunc func(map[string]int) string
 }
 
-// TODO: what if I first call New, then Import?
-// New() function creates a new NgramGenerator with the given order.
-func New(order int) *NgramGenerator {
+// TODO: what if I first call NewGenerator, then Import?
+// NewGenerator() function creates a new NgramGenerator with the given order.
+func NewGenerator(order int) *Generator {
 	if order < 1 {
 		panic("order must be greater than 0")
 	}
-	ng := &NgramGenerator{
-		Model: &model.Model{
+	ng := &Generator{
+		Model: &Model{
 			Order: order,
 			Data:  make(map[string]map[string]int),
 		},
@@ -32,13 +30,13 @@ func New(order int) *NgramGenerator {
 	return ng
 }
 
-func (ng *NgramGenerator) NextFunc(nextFunc func(map[string]int) string) {
+func (ng *Generator) NextFunc(nextFunc func(map[string]int) string) {
 	ng.nextFunc = nextFunc
 }
 
 // Start() function starts the model and sets
 // the initial history to the first key in the model.
-func (ng *NgramGenerator) Start() error {
+func (ng *Generator) Start() error {
 	if len(ng.Model.Data) == 0 {
 		return errors.New("model is empty")
 	}
@@ -50,7 +48,7 @@ func (ng *NgramGenerator) Start() error {
 }
 
 // Next() function returns the next word in the model based on the current history.
-func (ng *NgramGenerator) Next() (string, error) {
+func (ng *Generator) Next() (string, error) {
 	if ng.Model.IsEmpty() {
 		return "", errors.New("model is empty")
 	}
