@@ -18,6 +18,22 @@ const (
 	defaultHeight = 5
 )
 
+var (
+	correctStyle              = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+	wrongStyle                = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	pendingStyle              = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	wrongWordStyle            = wrongStyle.Underline(true)
+	wrongCharInWrongWordStyle = wrongStyle.Underline(true).Strikethrough(true)
+)
+
+// WrongWordStyle: lipgloss.NewStyle().
+// 	Foreground(lipgloss.Color("208")). // orange
+// 	Underline(true),
+// WrongCharInWrongWordStyle: lipgloss.NewStyle().
+// 	Foreground(lipgloss.Color("9")). // red
+// 	Underline(true).
+// 	Strikethrough(true),
+
 type Model struct {
 	expectedText []rune
 	typedText    []rune
@@ -30,10 +46,12 @@ type Model struct {
 	pos   int
 	focus bool
 
-	CorrectStyle lipgloss.Style
-	WrongStyle   lipgloss.Style
-	PendingStyle lipgloss.Style
-	CursorStyle  lipgloss.Style
+	CorrectStyle              lipgloss.Style
+	WrongStyle                lipgloss.Style
+	PendingStyle              lipgloss.Style
+	CursorStyle               lipgloss.Style
+	WrongWordStyle            lipgloss.Style
+	WrongCharInWrongWordStyle lipgloss.Style
 }
 
 // New() function creates a new Model with predefined styles.
@@ -48,9 +66,11 @@ func New() Model {
 		width:        defaultWidth,
 		height:       defaultHeight,
 
-		CorrectStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
-		WrongStyle:   lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Strikethrough(true),
-		PendingStyle: lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
+		CorrectStyle:              correctStyle,
+		WrongStyle:                wrongStyle,
+		PendingStyle:              pendingStyle,
+		WrongWordStyle:            wrongWordStyle,
+		WrongCharInWrongWordStyle: wrongCharInWrongWordStyle,
 	}
 }
 
@@ -282,16 +302,51 @@ func (m Model) View() string {
 		}
 		var chunk strings.Builder
 		chunkWidth := 0
+		wordTyped := true
+		wordCorrect := true
+
+		// Check if the word is fully typed and if it's correct
+		for i, r := range wordBuffer {
+			pos := startPos + i
+			if pos >= len(m.typedText) {
+				wordTyped = false
+				break
+			}
+			if m.typedText[pos] != r {
+				wordCorrect = false
+			}
+		}
 
 		for i, r := range wordBuffer {
-			style := m.PendingStyle
 			pos := startPos + i
-			if pos < len(m.typedText) {
-				if m.typedText[pos] == r {
-					style = m.CorrectStyle
+			style := m.PendingStyle
+			isSpace := unicode.IsSpace(r)
+			isTyped := pos < len(m.typedText)
+			charCorrect := isTyped && m.typedText[pos] == r
+
+			// Styles
+			switch {
+			case isTyped && charCorrect:
+				style = m.CorrectStyle
+			case isTyped && !charCorrect:
+				style = m.WrongStyle
+			case !isTyped:
+				style = m.PendingStyle
+			}
+
+			// If the word is fully typed and wrong,
+			// apply to all but spaces
+			if wordTyped && !wordCorrect && !isSpace {
+				if isTyped && !charCorrect {
+					style = m.WrongCharInWrongWordStyle
 				} else {
-					style = m.WrongStyle
+					style = m.WrongWordStyle
 				}
+			}
+
+			// Prevent underlining spaces after incorrect word
+			if isSpace && wordTyped && !wordCorrect {
+				style = m.CorrectStyle
 			}
 
 			styled := style.Render(string(r))
@@ -305,7 +360,6 @@ func (m Model) View() string {
 			chunkWidth += runewidth.RuneWidth(r)
 		}
 
-		// If chunk won't fit, flush line and start new one
 		if currentWidth+chunkWidth > m.width {
 			lines = append(lines, strings.Join(currentLine, ""))
 			currentLine = nil
