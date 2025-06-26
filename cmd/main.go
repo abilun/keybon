@@ -4,11 +4,12 @@ import (
 	"flag"
 	"fmt"
 
-	"keybon/internal/ngram/generator"
-	"keybon/internal/ui"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/abilun/keybon/internal/ngram/generator"
+	"github.com/abilun/keybon/internal/ui"
 )
 
 func main() {

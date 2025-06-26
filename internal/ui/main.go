@@ -1,11 +1,11 @@
 package ui
 
 import (
-	"keybon/internal/typing"
-	"keybon/internal/ui/input"
-	"keybon/internal/ui/results"
 	"strings"
 
+	"github.com/abilun/keybon/internal/typing"
+	"github.com/abilun/keybon/internal/ui/input"
+	"github.com/abilun/keybon/internal/ui/results"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )

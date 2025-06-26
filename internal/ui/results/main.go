@@ -51,7 +51,6 @@ func (m Model) View() string {
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Center, lines...)
-
 }
 
 func (m *Model) Reset() {

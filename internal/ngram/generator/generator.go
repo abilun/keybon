@@ -2,9 +2,10 @@ package generator
 
 import (
 	"errors"
+
 	"strings"
 
-	"keybon/internal/ngram/model"
+	"github.com/abilun/keybon/internal/ngram/model"
 )
 
 type NgramGenerator struct {

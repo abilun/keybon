@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"keybon/internal/scanner"
 	"strings"
 
+	"github.com/abilun/keybon/internal/scanner"
 	"github.com/klauspost/compress/zstd"
 )
 
