@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/alecthomas/kong v1.12.0
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/colorprofile v0.3.1 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect

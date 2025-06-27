@@ -1,5 +1,5 @@
 package generator
 
 type Generator interface {
-	Next() string
+	Next() (string, error)
 }

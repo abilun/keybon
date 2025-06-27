@@ -12,9 +12,9 @@ type Generator struct {
 	nextFunc func(map[string]int) string
 }
 
-// TODO: what if I first call NewGenerator, then Import?
-// NewGenerator() function creates a new NgramGenerator with the given order.
-func NewGenerator(order int) *Generator {
+// TODO: what if I first call New, then Import?
+// New() function creates a new NgramGenerator with the given order.
+func New(order int) *Generator {
 	if order < 1 {
 		panic("order must be greater than 0")
 	}
