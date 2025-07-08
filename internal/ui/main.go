@@ -6,6 +6,7 @@ import (
 	"github.com/abilun/keybon/internal/generator"
 	"github.com/abilun/keybon/internal/typing"
 	"github.com/abilun/keybon/internal/ui/input"
+	"github.com/abilun/keybon/internal/ui/keyboard"
 	"github.com/abilun/keybon/internal/ui/results"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,6 +28,7 @@ type model struct {
 
 	input         input.Model
 	resultsScreen results.Model
+	keyboard      keyboard.Model
 
 	height int
 	width  int
@@ -36,6 +38,7 @@ func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		m.input.Init(),
 		m.resultsScreen.Init(),
+		m.keyboard.Init(),
 		func() tea.Msg {
 			return refreshWordsMsg{}
 		},
@@ -115,6 +118,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.input, cmd = m.input.Update(msg)
 		cmds = append(cmds, cmd)
+
+		nextChar := m.input.NextChar()
+		m.keyboard.NextKey(string(nextChar))
+		m.keyboard, cmd = m.keyboard.Update(msg)
+
+		cmds = append(cmds, cmd)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -132,29 +141,29 @@ func (m model) View() string {
 		b.WriteString(greaterStyle.Width(lipgloss.Width(inputViewBorder)).Render("Keybon"))
 		b.WriteString("\n")
 		b.WriteString(inputViewBorder)
+		b.WriteString("\n")
+		b.WriteString(m.keyboard.View())
 		view = b.String()
 	}
 
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, view)
 }
 
-func (m *model) setGenerator(gen generator.Generator) {
-	m.generator = gen
-}
-
 func New() model {
 	input := input.New()
 	input.Focus()
+	keyboard, _ := keyboard.New(keyboard.En)
 
 	return model{
-		input: input,
-		state: mainView,
+		input:    input,
+		state:    mainView,
+		keyboard: keyboard,
 	}
 }
 
 func StartMainScreen(gen generator.Generator, wordsCount int) error {
 	ms := New()
-	ms.setGenerator(gen)
+	ms.generator = gen
 	ms.wordsCount = wordsCount
 
 	p := tea.NewProgram(

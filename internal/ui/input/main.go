@@ -19,20 +19,13 @@ const (
 )
 
 var (
-	correctStyle              = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
-	wrongStyle                = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	pendingStyle              = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	wrongWordStyle            = wrongStyle.Underline(true)
-	wrongCharInWrongWordStyle = wrongStyle.Underline(true).Strikethrough(true)
+	defaultCorrectStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+	defaultWrongStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	defaultPendingStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	defaultWrongWordStyle = defaultWrongStyle.Underline(true)
+	// Java flavored naming :D
+	defaultWrongCharInWrongWordStyle = defaultWrongStyle.Underline(true).Strikethrough(true)
 )
-
-// WrongWordStyle: lipgloss.NewStyle().
-// 	Foreground(lipgloss.Color("208")). // orange
-// 	Underline(true),
-// WrongCharInWrongWordStyle: lipgloss.NewStyle().
-// 	Foreground(lipgloss.Color("9")). // red
-// 	Underline(true).
-// 	Strikethrough(true),
 
 type Model struct {
 	expectedText []rune
@@ -66,11 +59,11 @@ func New() Model {
 		width:        defaultWidth,
 		height:       defaultHeight,
 
-		CorrectStyle:              correctStyle,
-		WrongStyle:                wrongStyle,
-		PendingStyle:              pendingStyle,
-		WrongWordStyle:            wrongWordStyle,
-		WrongCharInWrongWordStyle: wrongCharInWrongWordStyle,
+		CorrectStyle:              defaultCorrectStyle,
+		WrongStyle:                defaultWrongStyle,
+		PendingStyle:              defaultPendingStyle,
+		WrongWordStyle:            defaultWrongWordStyle,
+		WrongCharInWrongWordStyle: defaultWrongCharInWrongWordStyle,
 	}
 }
 
@@ -163,6 +156,14 @@ func (m *Model) CursorEnd() {
 // AtEnd() function returns true if the cursor is at the end of the text.
 func (m *Model) AtEnd() bool {
 	return m.pos == len(m.expectedText)
+}
+
+// NextChar() function returns the next character in the text.
+func (m *Model) NextChar() []rune {
+	if m.pos < 0 || m.pos >= len(m.expectedText) {
+		return []rune{}
+	}
+	return []rune(m.expectedText[m.pos : m.pos+1])
 }
 
 // Update() function updates the model based on the message.
