@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 
+	"github.com/abilun/keybon/internal/generator"
 	"github.com/abilun/keybon/internal/typing"
 	"github.com/abilun/keybon/internal/ui/input"
 	"github.com/abilun/keybon/internal/ui/results"
@@ -17,10 +18,12 @@ const (
 	resultsView
 )
 
-type mainScreen struct {
+type model struct {
 	state State
 
 	typingSession typing.TypingSession
+	generator     generator.Generator
+	wordsCount    int
 
 	input         input.Model
 	resultsScreen results.Model
@@ -29,18 +32,35 @@ type mainScreen struct {
 	width  int
 }
 
-func (m mainScreen) Init() tea.Cmd {
+func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		m.input.Init(),
 		m.resultsScreen.Init(),
+		func() tea.Msg {
+			return refreshWordsMsg{}
+		},
 	)
 }
 
-func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+type refreshWordsMsg struct{}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case refreshWordsMsg:
+		words := make([]string, 0, m.wordsCount)
+		for i := 0; i < m.wordsCount; i++ {
+			word, err := m.generator.Next()
+			if err != nil {
+				return m, tea.Quit
+			}
+			words = append(words, word)
+		}
+		text := strings.Join(words, " ")
+		m.input.SetExpectedText(text)
+
 	case input.InputCompleteMsg:
 		m.typingSession.TypedText = msg.TypedText
 		m.state = resultsView
@@ -60,6 +80,10 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = mainView
 		m.resultsScreen.Reset()
 		m.typingSession.Reset()
+
+		cmds = append(cmds, func() tea.Msg {
+			return refreshWordsMsg{}
+		})
 
 	case tea.WindowSizeMsg:
 		m.height = msg.Height
@@ -96,7 +120,7 @@ func (m mainScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m mainScreen) View() string {
+func (m model) View() string {
 	b := strings.Builder{}
 	var view string
 
@@ -114,19 +138,24 @@ func (m mainScreen) View() string {
 	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, view)
 }
 
-func New() mainScreen {
+func (m *model) setGenerator(gen generator.Generator) {
+	m.generator = gen
+}
+
+func New() model {
 	input := input.New()
 	input.Focus()
 
-	return mainScreen{
+	return model{
 		input: input,
 		state: mainView,
 	}
 }
 
-func StartMainScreen(text string) error {
+func StartMainScreen(gen generator.Generator, wordsCount int) error {
 	ms := New()
-	ms.input.SetExpectedText(text)
+	ms.setGenerator(gen)
+	ms.wordsCount = wordsCount
 
 	p := tea.NewProgram(
 		ms,
